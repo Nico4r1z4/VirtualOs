@@ -1,0 +1,56 @@
+# Reverse proxy + TLS automático (Let's Encrypt) + frontend estático.
+# DOMAIN se define en deploy/.env del servidor (ej. vos.orkiza.com).
+
+{$DOMAIN:localhost} {
+	encode gzip
+
+	# API bajo el mismo origen → sin CORS
+	handle /health {
+		reverse_proxy api:8000
+	}
+	handle /me {
+		reverse_proxy api:8000
+	}
+	handle /outliers* {
+		reverse_proxy api:8000
+	}
+	handle /posts/* {
+		reverse_proxy api:8000
+	}
+	handle /trends* {
+		reverse_proxy api:8000
+	}
+	handle /niche-profiles* {
+		reverse_proxy api:8000
+	}
+	handle /ingestions* {
+		reverse_proxy api:8000
+	}
+	handle /jobs/* {
+		reverse_proxy api:8000
+	}
+	handle /hooks* {
+		reverse_proxy api:8000
+	}
+	handle /briefs* {
+		reverse_proxy api:8000
+	}
+	handle /ideas/* {
+		reverse_proxy api:8000
+	}
+	handle /agent/* {
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
+	handle /webhooks/* {
+		reverse_proxy api:8000
+	}
+
+	# SPA
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+}
