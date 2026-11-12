@@ -15,11 +15,15 @@ from virtualos.db.client import close_pool, get_pool, init_pool
 from virtualos.ingestion.pipeline import ingest_niche
 from virtualos.observability.logs import setup_logging
 from virtualos.queue.postgres import PostgresJobQueue
+from virtualos.synthesis.brief import build_weekly_brief
+from virtualos.synthesis.hooks import synthesize_hooks
 
 logger = logging.getLogger(__name__)
 
 HANDLERS: dict[str, Any] = {
     "ingest_niche": ingest_niche,
+    "synthesize_hooks": synthesize_hooks,
+    "build_weekly_brief": build_weekly_brief,
 }
 
 IDLE_SLEEP_S = 2.0

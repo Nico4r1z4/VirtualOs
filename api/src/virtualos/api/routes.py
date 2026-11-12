@@ -144,9 +144,9 @@ async def list_trends(
     """
     async with user_tx(auth.claims) as conn:
         rows = await conn.fetch(sql, *args)
-    items = sorted(
-        (_record(r) for r in rows), key=lambda r: (r["rank"] is None, r["rank"] or 0)
-    )[:limit]
+    items = sorted((_record(r) for r in rows), key=lambda r: (r["rank"] is None, r["rank"] or 0))[
+        :limit
+    ]
     for it in items:
         if isinstance(it.get("metrics"), str):
             it["metrics"] = json.loads(it["metrics"])

@@ -60,9 +60,7 @@ async def main(tiktok: list[str], instagram: list[str], country: str, query: str
     # --- TikTok posts ---
     if tiktok:
         tt = TikTokProfilesConnector()
-        raw = await tt.fetch(
-            workspace_id=ws, params={"handles": tiktok, "results_per_profile": 20}
-        )
+        raw = await tt.fetch(workspace_id=ws, params={"handles": tiktok, "results_per_profile": 20})
         key = await save_raw(ws, raw)
         posts = tt.normalize(raw)
         async with pool.acquire() as conn:
@@ -104,7 +102,9 @@ async def main(tiktok: list[str], instagram: list[str], country: str, query: str
     # --- News ---
     if query:
         news_conn = SerperNewsConnector()
-        raw = await news_conn.fetch(workspace_id=ws, params={"query": query, "country": country.lower()})
+        raw = await news_conn.fetch(
+            workspace_id=ws, params={"query": query, "country": country.lower()}
+        )
         items = news_conn.normalize(raw)
         async with pool.acquire() as conn:
             n = await upsert_news(conn, workspace_id=ws, niche_profile_id=None, items=items)

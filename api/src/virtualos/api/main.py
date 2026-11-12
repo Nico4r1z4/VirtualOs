@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from virtualos.api.routes import router as tools_router
+from virtualos.api.synthesis_routes import router as synthesis_router
 from virtualos.api.webhooks import router as webhooks_router
 from virtualos.auth.deps import Auth
 from virtualos.config.settings import get_settings
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
 
     app.include_router(webhooks_router)
     app.include_router(tools_router)
+    app.include_router(synthesis_router)
 
     return app
 

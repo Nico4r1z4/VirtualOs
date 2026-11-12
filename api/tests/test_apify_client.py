@@ -59,9 +59,7 @@ async def test_webhook_rejects_bad_secret(monkeypatch: pytest.MonkeyPatch, fake_
     app = create_app()
     transport = httpx_lib.ASGITransport(app=app)
     async with httpx_lib.AsyncClient(transport=transport, base_url="http://test") as client:
-        bad = await client.post(
-            "/webhooks/apify", json={}, headers={"X-Webhook-Secret": "wrong"}
-        )
+        bad = await client.post("/webhooks/apify", json={}, headers={"X-Webhook-Secret": "wrong"})
         ok = await client.post(
             "/webhooks/apify",
             json={"eventType": "ACTOR.RUN.SUCCEEDED", "resource": {"id": "r1"}},

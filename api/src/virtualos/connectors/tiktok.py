@@ -63,7 +63,9 @@ class TikTokProfilesConnector:
             music = item.get("musicMeta") or {}
             video = item.get("videoMeta") or {}
             hashtags = [
-                h["name"] for h in item.get("hashtags") or [] if isinstance(h, dict) and h.get("name")
+                h["name"]
+                for h in item.get("hashtags") or []
+                if isinstance(h, dict) and h.get("name")
             ]
             subtitles = item.get("videoMeta", {}).get("subtitleLinks") or []
             posts.append(

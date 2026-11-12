@@ -69,7 +69,9 @@ class SerperNewsConnector:
         }
         payload = {"q": query, "gl": gl, "hl": hl, "num": 10}
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            resp = await client.post("https://google.serper.dev/news", headers=headers, json=payload)
+            resp = await client.post(
+                "https://google.serper.dev/news", headers=headers, json=payload
+            )
             await record_usage(workspace_id, "serper", units=1, unit_label="credits")
             resp.raise_for_status()
             data = resp.json()

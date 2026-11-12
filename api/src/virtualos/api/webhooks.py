@@ -20,9 +20,7 @@ async def apify_webhook(request: Request) -> dict[str, str]:
     if settings.apify_webhook_secret is None:
         raise HTTPException(status_code=503, detail="Webhook secret not configured")
 
-    provided = request.headers.get("X-Webhook-Secret", "") or request.query_params.get(
-        "secret", ""
-    )
+    provided = request.headers.get("X-Webhook-Secret", "") or request.query_params.get("secret", "")
     expected = settings.apify_webhook_secret.get_secret_value()
     if not hmac.compare_digest(provided.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="Invalid webhook secret")

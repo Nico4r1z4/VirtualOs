@@ -10,6 +10,8 @@ import { Spinner } from "@/components/ui"
 import { LoginPage } from "@/pages/LoginPage"
 import { OutliersPage } from "@/pages/OutliersPage"
 import { TrendsPage } from "@/pages/TrendsPage"
+import { HooksPage } from "@/pages/HooksPage"
+import { BriefPage } from "@/pages/BriefPage"
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 3000 } },
@@ -33,15 +35,6 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div>
-      <h1 className="mb-1 text-2xl">{title}</h1>
-      <p className="text-sm text-gray-500">Disponible en una fase posterior del MVP.</p>
-    </div>
-  )
-}
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -51,8 +44,8 @@ createRoot(document.getElementById("root")!).render(
             <Route element={<Layout />}>
               <Route path="/" element={<OutliersPage />} />
               <Route path="/tendencias" element={<TrendsPage />} />
-              <Route path="/ganchos" element={<Placeholder title="Ganchos" />} />
-              <Route path="/brief" element={<Placeholder title="Brief semanal" />} />
+              <Route path="/ganchos" element={<HooksPage />} />
+              <Route path="/brief" element={<BriefPage />} />
             </Route>
           </Routes>
         </RequireAuth>
