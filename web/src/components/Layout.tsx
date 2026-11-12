@@ -3,6 +3,9 @@
 // herramientas densas (tablero, tendencias, ganchos, brief).
 
 import { NavLink, Outlet } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+import { api } from "@/api/client"
+import { MascotPanel } from "@/components/MascotPanel"
 import { CalendarRange, Flame, LogOut, Radar, Sparkles } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { Toaster } from "@/components/ui"
@@ -15,6 +18,13 @@ const NAV = [
 ]
 
 export function Layout() {
+  // Onboarding: si el workspace no tiene perfil de nicho, la mascota abre sola.
+  const { data: profiles, isFetched } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: api.profiles,
+  })
+  const needsOnboarding = isFetched && (profiles?.items.length ?? 0) === 0
+
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-60 shrink-0 flex-col border-r border-gray-200 bg-white px-5 py-8">
@@ -51,6 +61,7 @@ export function Layout() {
       <main className="min-w-0 flex-1 px-10 py-8">
         <Outlet />
       </main>
+      {isFetched && <MascotPanel key={String(needsOnboarding)} startOpen={needsOnboarding} />}
       <Toaster />
     </div>
   )
