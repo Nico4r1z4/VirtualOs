@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Secrets — NUNCA commitear
+.env
+.env.*
+!.env.example
+*accessKeys*.csv
+*.pem
+
+# Data local
+api/.data/
+.DS_Store

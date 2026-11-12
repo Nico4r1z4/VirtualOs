@@ -1,0 +1,130 @@
+/* ============================================================
+   VIRTUALOS — Design system (tokens Orkiza, Brand Book v3.1)
+   Regla: ningún color fuera de esta paleta.
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* ---- Fuentes de marca (self-hosted, ver public/fonts) ---- */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ---- Paleta Orkiza → theme de Tailwind v4 ---- */
+@theme {
+  --font-display: "Space Grotesk", "Helvetica Neue", sans-serif;
+  --font-body: "Inter", "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+
+  /* Navy — primario oscuro */
+  --color-navy-900: #0d1621;
+  --color-navy-800: #1e2a38;
+  --color-navy-700: #253448;
+  --color-navy-600: #2e4060;
+  --color-navy-500: #3a5070;
+
+  /* Blue — acento principal */
+  --color-blue-600: #0e7fcf;
+  --color-blue-500: #1d9bf0;
+  --color-blue-400: #4db3f5;
+  --color-blue-300: #8ed0f9;
+  --color-blue-100: #dff1fd;
+
+  /* Teal */
+  --color-teal-500: #00b09b;
+  --color-teal-400: #12c2b8;
+  --color-teal-300: #4dd9cf;
+
+  /* Green */
+  --color-green-600: #3ab369;
+  --color-green-500: #3ec878;
+  --color-green-400: #a2e05e;
+  --color-green-300: #c4eea0;
+
+  /* Neutrales */
+  --color-gray-50: #f5f7fa;
+  --color-gray-100: #eef1f5;
+  --color-gray-200: #d1d5db;
+  --color-gray-300: #b0b8c4;
+  --color-gray-400: #8896a5;
+  --color-gray-500: #637180;
+  --color-gray-600: #475767;
+  --color-gray-700: #334455;
+  --color-gray-800: #1e2a38;
+  --color-gray-900: #0d1621;
+
+  /* Estados */
+  --color-success: #3ec878;
+  --color-warning: #f5a623;
+  --color-error: #e74c3c;
+  --color-info: #1d9bf0;
+
+  /* Sombras de marca */
+  --shadow-sm: 0 1px 3px rgba(30, 42, 56, 0.08), 0 1px 2px rgba(30, 42, 56, 0.04);
+  --shadow-md: 0 4px 12px rgba(30, 42, 56, 0.1), 0 2px 4px rgba(30, 42, 56, 0.06);
+  --shadow-lg: 0 10px 32px rgba(30, 42, 56, 0.12), 0 4px 8px rgba(30, 42, 56, 0.06);
+}
+
+/* ---- Semánticos ---- */
+:root {
+  --bg-base: var(--color-gray-50);
+  --bg-surface: #ffffff;
+  --bg-dark-deep: var(--color-navy-900);
+  --fg-primary: var(--color-navy-800);
+  --fg-secondary: var(--color-gray-500);
+  --fg-tertiary: var(--color-gray-400);
+  --brand-primary: var(--color-blue-500);
+  --border-subtle: var(--color-gray-200);
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--fg-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-primary);
+}
+
+/* Label de marca: uppercase, tracking amplio */
+.label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+
+/* Pulso de atención (outliers nuevos, jobs corriendo) */
+@keyframes soft-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 155, 240, 0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(29, 155, 240, 0); }
+}
+.soft-pulse { animation: soft-pulse 2s ease-in-out infinite; }

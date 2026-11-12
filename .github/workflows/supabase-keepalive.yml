@@ -1,0 +1,35 @@
+# Mantiene despierto el proyecto Supabase (free tier pausa tras inactividad)
+# y saca un backup semanal del schema vos.
+name: supabase-keepalive
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # ping diario
+    - cron: "41 7 * * 0"   # backup semanal (domingo)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database
+        if: ${{ env.DB_URL != '' }}
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: psql "$DB_URL" -c "SELECT COUNT(*) FROM vos.workspaces;"
+
+  backup:
+    if: github.event.schedule == '41 7 * * 0' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump vos schema
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then echo "secret missing, skip"; exit 0; fi
+          pg_dump "$DB_URL" --schema=vos | gzip > vos-backup.sql.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vos-backup-${{ github.run_id }}
+          path: vos-backup.sql.gz
+          retention-days: 90
