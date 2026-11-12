@@ -1,0 +1,27 @@
+[
+  {
+    "hashtagName": "finanzaspersonales",
+    "hashtagId": "123001",
+    "rank": 1,
+    "countryCode": "CO",
+    "publishCnt": 18200,
+    "videoViews": 94000000,
+    "trend": "up"
+  },
+  {
+    "hashtagName": "ahorro2026",
+    "rank": 2,
+    "countryCode": "CO",
+    "publishCnt": 9100,
+    "videoViews": 41000000
+  },
+  {
+    "name": "#inversiones",
+    "position": 3,
+    "viewCount": 12500000
+  },
+  {
+    "rank": 4,
+    "comment": "item sin nombre — debe descartarse"
+  }
+]

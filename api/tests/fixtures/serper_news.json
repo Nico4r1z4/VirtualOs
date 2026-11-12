@@ -1,0 +1,20 @@
+{
+  "news": [
+    {
+      "title": "Banco de la República baja tasas: qué significa para tu bolsillo",
+      "link": "https://ejemplo-noticias.co/banrep-tasas",
+      "snippet": "La reducción de tasas cambia el panorama para créditos y ahorro...",
+      "date": "hace 2 días",
+      "source": "Ejemplo Noticias"
+    },
+    {
+      "title": "Jóvenes colombianos lideran apertura de cuentas de inversión",
+      "link": "https://ejemplo-finanzas.co/jovenes-inversion",
+      "snippet": "Las fintech reportan crecimiento récord en cuentas de bajo monto...",
+      "source": "Ejemplo Finanzas"
+    },
+    {
+      "snippet": "item sin título ni link — debe descartarse"
+    }
+  ]
+}

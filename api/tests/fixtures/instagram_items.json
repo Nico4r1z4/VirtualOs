@@ -1,0 +1,36 @@
+[
+  {
+    "id": "3482001122334455667",
+    "shortCode": "DAbCdEfGhIj",
+    "type": "Video",
+    "caption": "El truco del 50/30/20 explicado en 30 segundos #finanzas #reels",
+    "hashtags": ["finanzas", "reels"],
+    "url": "https://www.instagram.com/p/DAbCdEfGhIj/",
+    "commentsCount": 412,
+    "likesCount": 23100,
+    "videoPlayCount": 489000,
+    "videoViewCount": 395000,
+    "timestamp": "2026-11-06T18:30:00.000Z",
+    "ownerUsername": "plata.sencilla",
+    "ownerFollowersCount": 180500,
+    "videoDuration": 31.5,
+    "displayUrl": "https://scontent.cdninstagram.example/thumb1.jpg",
+    "musicInfo": {
+      "audio_id": "982374982374",
+      "song_name": "Audio original",
+      "artist_name": "plata.sencilla"
+    }
+  },
+  {
+    "shortCode": "DAzZyYxXwWv",
+    "type": "Image",
+    "caption": "Carrusel: 5 apps para presupuestar",
+    "hashtags": ["presupuesto"],
+    "url": "https://www.instagram.com/p/DAzZyYxXwWv/",
+    "commentsCount": 58,
+    "likesCount": 3900,
+    "timestamp": "2026-11-09T12:00:00.000Z",
+    "ownerUsername": "plata.sencilla",
+    "displayUrl": "https://scontent.cdninstagram.example/thumb2.jpg"
+  }
+]

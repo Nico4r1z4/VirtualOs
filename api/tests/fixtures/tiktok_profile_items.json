@@ -1,0 +1,69 @@
+[
+  {
+    "id": "7421337700112233445",
+    "text": "3 errores que te mantienen pobre #finanzaspersonales #ahorro #colombia",
+    "createTimeISO": "2026-11-05T14:22:00.000Z",
+    "createTime": 1793888520,
+    "authorMeta": {
+      "id": "6791012345678901234",
+      "name": "finanzas.claras",
+      "nickName": "Finanzas Claras",
+      "fans": 412000,
+      "verified": false
+    },
+    "musicMeta": {
+      "musicId": "7301234567890123456",
+      "musicName": "original sound - finanzas.claras",
+      "musicAuthor": "finanzas.claras"
+    },
+    "videoMeta": {
+      "duration": 42,
+      "coverUrl": "https://p16-sign.tiktokcdn.example/cover1.jpg",
+      "subtitleLinks": [
+        { "language": "spa-ES", "downloadLink": "https://v16m.tiktokcdn.example/sub1.vtt" }
+      ]
+    },
+    "diggCount": 98200,
+    "shareCount": 12400,
+    "playCount": 1250000,
+    "commentCount": 3100,
+    "webVideoUrl": "https://www.tiktok.com/@finanzas.claras/video/7421337700112233445",
+    "hashtags": [
+      { "name": "finanzaspersonales" },
+      { "name": "ahorro" },
+      { "name": "colombia" }
+    ]
+  },
+  {
+    "id": "7421000000099887766",
+    "text": "Cómo armé mi fondo de emergencia con salario mínimo",
+    "createTimeISO": "2026-11-08T09:10:00.000Z",
+    "createTime": 1794129000,
+    "authorMeta": {
+      "id": "6791012345678901234",
+      "name": "finanzas.claras",
+      "nickName": "Finanzas Claras",
+      "fans": 412000
+    },
+    "musicMeta": {
+      "musicId": "7399999999990123456",
+      "musicName": "sonido trending noviembre",
+      "musicAuthor": "artista.x"
+    },
+    "videoMeta": {
+      "duration": 58,
+      "coverUrl": "https://p16-sign.tiktokcdn.example/cover2.jpg",
+      "subtitleLinks": []
+    },
+    "diggCount": 5400,
+    "shareCount": 300,
+    "playCount": 88000,
+    "commentCount": 210,
+    "webVideoUrl": "https://www.tiktok.com/@finanzas.claras/video/7421000000099887766",
+    "hashtags": []
+  },
+  {
+    "text": "item sin id — debe descartarse en normalize",
+    "authorMeta": { "name": "cuenta.rota" }
+  }
+]

@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from virtualos.api.webhooks import router as webhooks_router
 from virtualos.auth.deps import Auth
 from virtualos.config.settings import get_settings
 from virtualos.db import client as db_client
@@ -46,6 +47,8 @@ def create_app() -> FastAPI:
             "email": auth.email,
             "workspace_id": auth.workspace_id,
         }
+
+    app.include_router(webhooks_router)
 
     return app
 

@@ -21,6 +21,7 @@ dependencies = [
     "duckduckgo-search>=6.3",
     "reportlab>=4.2",
     "sse-starlette>=2.1",
+    "boto3>=1.35",
 ]
 
 [dependency-groups]
