@@ -9,6 +9,7 @@ import { Layout } from "@/components/Layout"
 import { Spinner } from "@/components/ui"
 import { LoginPage } from "@/pages/LoginPage"
 import { OutliersPage } from "@/pages/OutliersPage"
+import { TrendsPage } from "@/pages/TrendsPage"
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 3000 } },
@@ -49,7 +50,7 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<OutliersPage />} />
-              <Route path="/tendencias" element={<Placeholder title="Tendencias" />} />
+              <Route path="/tendencias" element={<TrendsPage />} />
               <Route path="/ganchos" element={<Placeholder title="Ganchos" />} />
               <Route path="/brief" element={<Placeholder title="Brief semanal" />} />
             </Route>
