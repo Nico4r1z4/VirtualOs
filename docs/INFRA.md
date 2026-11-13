@@ -61,7 +61,11 @@ Ver el estado y los logs:
 ssh -i ~/.ssh/virtualos-demo ubuntu@3.137.22.45 "cd ~/virtualos/deploy && sudo docker compose ps && sudo docker compose logs --tail 50"
 ```
 
-Redesplegar después de cambios: compilar la web con `VITE_API_BASE=https://vos.orkiza.com npm run build`, empaquetar `api/ deploy/ web/dist`, copiarlo, descomprimirlo y correr `sudo docker compose up -d --build`. El script `deploy/deploy.sh` usa rsync, que no viene en Git Bash de Windows; hasta automatizarlo, se usa el empaquetado con tar + scp.
+**Redesplegar solo el frontend** (sin caída): corre `./deploy/deploy_web.sh` desde Git Bash. Compila, sube y reemplaza los archivos **dentro** de `web/dist` sin borrar la carpeta, y verifica contra la respuesta real del servidor.
+
+> ⚠️ **Nunca borres `~/virtualos/web/dist` en el servidor.** Caddy la tiene montada; si la carpeta se borra y se recrea, Caddy sigue apuntando a la borrada y todo el sitio responde 404. Pasó el 13 nov y estuvo caído ~5 min. Si vuelve a pasar: `sudo docker compose restart caddy`.
+
+**Redesplegar la API o el worker:** empaqueta `api/` (sin `.venv`, `.env` ni `.data`), cópialo, descomprímelo en `~/virtualos` y corre `sudo docker compose up -d --build api worker`. El script `deploy/deploy.sh` usa rsync, que no viene en Git Bash de Windows; hasta automatizarlo, se usa tar + scp.
 
 **Si cambia tu IP** y no puedes entrar por SSH: en EC2 → Security Groups → `sg-0c6b8235ca9984c37` → Inbound rules, edita la regla del puerto 22 con tu IP nueva.
 
