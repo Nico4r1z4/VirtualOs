@@ -15,6 +15,7 @@ from pydantic import BaseModel, ValidationError
 from virtualos.config.settings import get_settings
 from virtualos.db.client import get_pool
 from virtualos.llm.provider import get_provider
+from virtualos.queue.postgres import report_progress
 from virtualos.synthesis.prompts import HOOKS_SYSTEM, wrap_untrusted
 from virtualos.synthesis.transcripts import fetch_transcript
 
@@ -65,8 +66,12 @@ async def synthesize_hooks(workspace_id: str, payload: dict[str, Any]) -> dict[s
 
     provider = get_provider()
     done, failed = 0, 0
+    total = len(posts)
+    if total == 0:
+        await report_progress("No hay outliers nuevos por analizar", done=0, total=0)
 
-    for p in posts:
+    for i, p in enumerate(posts):
+        await report_progress("Analizando ganchos de los outliers", done=i, total=total)
         raw = p["raw"]
         raw_dict = json.loads(raw) if isinstance(raw, str) else dict(raw or {})
 

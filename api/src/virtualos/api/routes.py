@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from virtualos.auth.deps import Auth
 from virtualos.db.client import get_pool, user_tx
-from virtualos.queue.postgres import PostgresJobQueue
+from virtualos.queue.postgres import PostgresJobQueue, ingestions_today
 
 router = APIRouter(tags=["tools"])
 
@@ -249,24 +249,79 @@ async def start_ingestion(body: IngestionIn, auth: Auth) -> dict[str, str]:
     if profile is None:
         raise HTTPException(status_code=404, detail="Perfil de nicho no encontrado o archivado")
 
-    queue = PostgresJobQueue(get_pool())
-    job_id = await queue.enqueue(
-        workspace_id=auth.workspace_id,
+    pool = get_pool()
+    queue = PostgresJobQueue(pool)
+    return await enqueue_paid_ingestion(queue, pool, auth.workspace_id, body.niche_profile_id)
+
+
+async def enqueue_paid_ingestion(
+    queue: PostgresJobQueue, pool: Any, workspace_id: str, niche_profile_id: str
+) -> dict[str, str]:
+    """Shared by the endpoint and the mascot tool: dedupe + daily plan cap."""
+    job_id, created = await queue.enqueue_or_get(
+        workspace_id=workspace_id,
         kind="ingest_niche",
-        payload={"niche_profile_id": body.niche_profile_id},
+        payload={"niche_profile_id": niche_profile_id},
     )
+    if not created:
+        return {"job_id": job_id, "status": "already_running"}
+    # Cap checked after dedupe so re-clicking a running ingestion never counts.
+    used, limit = await ingestions_today(pool, workspace_id)
+    if limit is not None and used > limit:
+        await pool.execute(
+            "UPDATE vos.jobs SET status = 'failed', finished_at = NOW(), "
+            "error = 'superseded: daily ingestion limit' WHERE id = $1 AND status = 'pending'",
+            job_id,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"Tu plan permite {limit} ingestas por día y ya usaste {limit}. "
+            "Los datos se actualizan de nuevo mañana.",
+        )
     return {"job_id": job_id, "status": "queued"}
+
+
+_JOB_COLS = "id, kind, status, attempts, error, progress, created_at, started_at, finished_at"
+
+
+def _job_out(row: Any) -> dict[str, Any]:
+    d = _record(row)
+    if isinstance(d.get("progress"), str):
+        d["progress"] = json.loads(d["progress"])
+    # Internal bookkeeping errors are not user-facing failures.
+    if d.get("error") and str(d["error"]).startswith("superseded"):
+        d["error"] = None
+    return d
+
+
+@router.get("/jobs")
+async def list_jobs(auth: Auth) -> dict[str, Any]:
+    """Active jobs + jobs finished in the last 10 minutes (so the UI can
+    announce completion). Polled by the web's progress bar."""
+    async with user_tx(auth.claims) as conn:
+        rows = await conn.fetch(
+            f"""
+            SELECT {_JOB_COLS} FROM vos.jobs
+            WHERE workspace_id = $1
+              AND (status IN ('pending', 'running')
+                   OR finished_at >= NOW() - interval '10 minutes')
+              AND NOT (status = 'failed' AND COALESCE(error, '') LIKE 'superseded%')
+            ORDER BY created_at DESC
+            LIMIT 20
+            """,
+            auth.workspace_id,
+        )
+    return {"items": [_job_out(r) for r in rows]}
 
 
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str, auth: Auth) -> dict[str, Any]:
     async with user_tx(auth.claims) as conn:
         row = await conn.fetchrow(
-            "SELECT id, kind, status, attempts, error, created_at, started_at, finished_at "
-            "FROM vos.jobs WHERE id = $1 AND workspace_id = $2",
+            f"SELECT {_JOB_COLS} FROM vos.jobs WHERE id = $1 AND workspace_id = $2",
             job_id,
             auth.workspace_id,
         )
     if row is None:
         raise HTTPException(status_code=404, detail="Job no encontrado")
-    return _record(row)
+    return _job_out(row)

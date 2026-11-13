@@ -14,7 +14,7 @@ from typing import Any
 from virtualos.db.client import close_pool, get_pool, init_pool
 from virtualos.ingestion.pipeline import ingest_niche
 from virtualos.observability.logs import setup_logging
-from virtualos.queue.postgres import PostgresJobQueue
+from virtualos.queue.postgres import PostgresJobQueue, current_job_id
 from virtualos.synthesis.brief import build_weekly_brief
 from virtualos.synthesis.hooks import synthesize_hooks
 
@@ -43,13 +43,16 @@ async def run_worker(stop: asyncio.Event) -> None:
 
         handler = HANDLERS[job.kind]
         logger.info("job %s (%s) attempt %d", job.id, job.kind, job.attempts)
+        token = current_job_id.set(job.id)
         try:
             result = await handler(job.workspace_id, job.payload)
-            await queue.complete(job.id)
+            await queue.complete(job.id, result if isinstance(result, dict) else None)
             logger.info("job %s done: %s", job.id, result)
         except Exception as exc:
             logger.exception("job %s failed", job.id)
             await queue.fail(job.id, f"{type(exc).__name__}: {exc}")
+        finally:
+            current_job_id.reset(token)
 
     await close_pool()
     logger.info("worker stopped")

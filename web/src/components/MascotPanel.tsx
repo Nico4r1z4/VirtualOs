@@ -33,7 +33,9 @@ function summarizeResult(name: string, result: Record<string, unknown>): string 
       return `Perfil "${String(result.name)}" ${result.created ? "creado" : "actualizado"}`
     case "start_ingestion":
     case "build_weekly_brief":
-      return `Job encolado (${String(result.job_id).slice(0, 8)}…)`
+      return result.status === "already_running"
+        ? "Ya había uno en curso (sin cobro extra)"
+        : "En marcha · mira el avance arriba"
     case "get_job_status":
       return `Estado: ${String(result.status)}`
     case "get_outliers":

@@ -67,12 +67,12 @@ class SynthesizeIn(BaseModel):
 @router.post("/hooks/synthesize", status_code=202)
 async def synthesize(body: SynthesizeIn, auth: Auth) -> dict[str, str]:
     queue = PostgresJobQueue(get_pool())
-    job_id = await queue.enqueue(
+    job_id, created = await queue.enqueue_or_get(
         workspace_id=auth.workspace_id,
         kind="synthesize_hooks",
         payload={"min_outlier": body.min_outlier, "limit": body.limit},
     )
-    return {"job_id": job_id, "status": "queued"}
+    return {"job_id": job_id, "status": "queued" if created else "already_running"}
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +87,12 @@ class BriefIn(BaseModel):
 @router.post("/briefs/generate", status_code=202)
 async def generate_brief(body: BriefIn, auth: Auth) -> dict[str, str]:
     queue = PostgresJobQueue(get_pool())
-    job_id = await queue.enqueue(
+    job_id, created = await queue.enqueue_or_get(
         workspace_id=auth.workspace_id,
         kind="build_weekly_brief",
         payload={"niche_profile_id": body.niche_profile_id},
     )
-    return {"job_id": job_id, "status": "queued"}
+    return {"job_id": job_id, "status": "queued" if created else "already_running"}
 
 
 @router.get("/briefs")

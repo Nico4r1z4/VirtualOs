@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from virtualos.config.settings import get_settings
 from virtualos.db.client import get_pool
 from virtualos.llm.provider import get_provider
+from virtualos.queue.postgres import report_progress
 from virtualos.synthesis.hooks import synthesize_hooks
 from virtualos.synthesis.prompts import IDEAS_SYSTEM, wrap_untrusted
 
@@ -165,6 +166,7 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
     )
     user_msg = "\n".join(lines)
 
+    await report_progress(f"Generando ideas con IA a partir de {len(posts)} outliers")
     provider = get_provider()
     result = await provider.complete(
         model=settings.resolved_model_strong,
@@ -180,6 +182,7 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
     if parsed is None:
         raise ValueError("strong model returned unparseable ideas JSON")
 
+    await report_progress("Validando evidencia y guardando el brief")
     valid_posts = {str(p["id"]) for p in posts}
     valid_trends = {str(t["id"]) for t in trends}
     valid_news = {str(n["id"]) for n in news}

@@ -122,6 +122,22 @@ export type JobStatus = {
   error: string | null
 }
 
+export type JobInfo = JobStatus & {
+  progress: {
+    stage?: string
+    done?: number
+    total?: number
+    result?: Record<string, unknown>
+  }
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+}
+
+// Respuesta de toda acción que gasta dinero: "already_running" significa que
+// NO se lanzó otra (ya había una en curso) — no hay cobro extra.
+export type EnqueueResult = { job_id: string; status: "queued" | "already_running" }
+
 export type OutlierFilters = {
   platform?: string
   min_multiplier?: number
@@ -150,10 +166,13 @@ export const api = {
   profiles: () => get<{ items: NicheProfile[] }>("/niche-profiles"),
   createProfile: (body: Partial<NicheProfile>) => post<NicheProfile>("/niche-profiles", body),
   startIngestion: (nicheProfileId: string) =>
-    post<{ job_id: string; status: string }>("/ingestions", {
+    post<EnqueueResult>("/ingestions", {
       niche_profile_id: nicheProfileId,
     }),
-  job: (id: string) => get<JobStatus>(`/jobs/${id}`),
+  synthesizeHooks: () => post<EnqueueResult>("/hooks/synthesize", { min_outlier: 2, limit: 50 }),
+  generateBrief: () => post<EnqueueResult>("/briefs/generate", {}),
+  job: (id: string) => get<JobInfo>(`/jobs/${id}`),
+  jobs: () => get<{ items: JobInfo[] }>("/jobs"),
 }
 
 export { get, post }

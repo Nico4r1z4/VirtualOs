@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Sparkles } from "lucide-react"
-import { get, post } from "@/api/client"
+import { Loader2, Sparkles } from "lucide-react"
+import { api, get } from "@/api/client"
+import { useActiveJob } from "@/components/JobsBar"
 import { Badge, Button, Card, EmptyState, ExternalLink, Spinner, toast } from "@/components/ui"
 import { compact, multiplier } from "@/lib/format"
 
@@ -47,14 +48,20 @@ export function HooksPage() {
       get<{ items: Hook[] }>(`/hooks${hookType ? `?hook_type=${hookType}` : ""}`),
   })
 
+  const running = useActiveJob("synthesize_hooks")
   const synthesize = useMutation({
-    mutationFn: () => post<{ job_id: string }>("/hooks/synthesize", { min_outlier: 2 }),
-    onSuccess: () => {
-      toast("Análisis de ganchos encolado. Los nuevos aparecen al terminar.")
-      setTimeout(() => qc.invalidateQueries({ queryKey: ["hooks"] }), 15000)
+    mutationFn: api.synthesizeHooks,
+    onSuccess: (res) => {
+      toast(
+        res.status === "already_running"
+          ? "Ya hay un análisis en curso: no se lanzó otro ni se cobró de nuevo."
+          : "Analizando ganchos. Mira el avance arriba; te avisamos al terminar.",
+      )
+      qc.invalidateQueries({ queryKey: ["jobs"] })
     },
     onError: (e) => toast((e as Error).message, "error"),
   })
+  const busy = synthesize.isPending || !!running
 
   return (
     <div>
@@ -65,10 +72,15 @@ export function HooksPage() {
             Ganchos y estructuras extraídos solo de los posts que sobre-rindieron
           </p>
         </div>
-        <Button onClick={() => synthesize.mutate()} disabled={synthesize.isPending}>
-          <Sparkles className="size-4" />
-          Analizar outliers nuevos
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button onClick={() => synthesize.mutate()} disabled={busy}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            {busy ? "Analizando…" : "Analizar outliers nuevos"}
+          </Button>
+          <span className="text-[11px] text-gray-400">
+            Solo procesa outliers sin analizar · ~US$0.002 c/u
+          </span>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1.5">

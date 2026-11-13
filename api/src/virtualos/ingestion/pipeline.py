@@ -16,6 +16,7 @@ from virtualos.connectors.tiktok import TikTokProfilesConnector, TikTokTrendsCon
 from virtualos.db.client import get_pool
 from virtualos.ingestion.store import insert_trends, upsert_account, upsert_news, upsert_post
 from virtualos.metrics.recompute import recompute_workspace_metrics
+from virtualos.queue.postgres import report_progress
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,14 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
     if "instagram" in platforms and seed_accounts.get("instagram"):
         connectors.append(("instagram", InstagramProfilesConnector()))
 
-    for platform, conn_impl in connectors:
+    names = {"tiktok": "TikTok", "instagram": "Instagram"}
+    for step, (platform, conn_impl) in enumerate(connectors, start=1):
         handles = seed_accounts[platform]
+        await report_progress(
+            f"Descargando posts de {names[platform]} ({len(handles)} cuentas)",
+            done=step - 1,
+            total=len(connectors),
+        )
         raw = await conn_impl.fetch(
             workspace_id=workspace_id,
             params={"handles": handles, "results_per_profile": per_profile},
@@ -77,6 +84,7 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
 
     # --- Platform trends per country (TikTok Creative Center) ---
     if "tiktok" in platforms:
+        await report_progress(f"Buscando tendencias ({', '.join(countries)})")
         trends_conn = TikTokTrendsConnector()
         for country in countries:
             try:
@@ -94,6 +102,7 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
 
     # --- News on profile keywords ---
     if keywords:
+        await report_progress("Buscando noticias del nicho")
         news_conn = SerperNewsConnector()
         query = " ".join(keywords[:4])
         try:
@@ -113,6 +122,7 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
             logger.exception("news ingestion failed")
 
     # --- Metrics ---
+    await report_progress(f"Calculando outliers sobre {stats['posts']} posts")
     async with pool.acquire() as conn:
         stats["metrics_updated"] = await recompute_workspace_metrics(conn, workspace_id)
 

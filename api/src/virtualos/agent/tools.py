@@ -242,13 +242,23 @@ async def execute_tool(
         )
         if profile is None:
             return {"error": "no_profile", "detail": "No hay perfil de nicho activo todavía."}
-        queue = PostgresJobQueue(pool)
-        job_id = await queue.enqueue(
-            workspace_id=workspace_id,
-            kind="ingest_niche",
-            payload={"niche_profile_id": str(profile["id"])},
-        )
-        return {"job_id": job_id, "profile": profile["name"], "status": "queued"}
+        from fastapi import HTTPException
+
+        from virtualos.api.routes import enqueue_paid_ingestion
+
+        try:
+            out = await enqueue_paid_ingestion(
+                PostgresJobQueue(pool), pool, workspace_id, str(profile["id"])
+            )
+        except HTTPException as exc:
+            return {"error": "plan_limit", "detail": exc.detail}
+        if out["status"] == "already_running":
+            return {
+                **out,
+                "profile": profile["name"],
+                "detail": "Ya hay una ingesta en curso; no se lanzó otra (evita cobros dobles).",
+            }
+        return {**out, "profile": profile["name"]}
 
     if name == "get_job_status":
         row = await pool.fetchrow(
@@ -335,9 +345,15 @@ async def execute_tool(
 
     if name == "build_weekly_brief":
         queue = PostgresJobQueue(pool)
-        job_id = await queue.enqueue(
+        job_id, created = await queue.enqueue_or_get(
             workspace_id=workspace_id, kind="build_weekly_brief", payload={}
         )
+        if not created:
+            return {
+                "job_id": job_id,
+                "status": "already_running",
+                "detail": "Ya se está generando un brief; no se lanzó otro.",
+            }
         return {"job_id": job_id, "status": "queued"}
 
     if name == "explain_feature":

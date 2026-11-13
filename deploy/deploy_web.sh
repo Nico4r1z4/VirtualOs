@@ -40,8 +40,16 @@ ssh -i "$KEY" "$HOST" '
 '
 
 echo "==> Verify from the SERVER response (not local files)"
-SERVED="$(curl -s --max-time 15 "$DOMAIN/" | grep -oE 'index-[A-Za-z0-9_-]+\.js' | head -1 || true)"
-CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$DOMAIN/")"
+# Retries: a transient local DNS failure must not report a false FAIL
+# (happened 2026-11-13: deploy was fine, first curl came back empty).
+SERVED=""; CODE="000"
+for _ in 1 2 3 4; do
+  HTML="$(curl -s --max-time 15 -w '\n%{http_code}' "$DOMAIN/" || true)"
+  CODE="$(printf '%s' "$HTML" | tail -n1)"
+  SERVED="$(printf '%s' "$HTML" | grep -oE 'index-[A-Za-z0-9_-]+\.js' | head -1 || true)"
+  [ "$CODE" = "200" ] && [ -n "$SERVED" ] && break
+  sleep 3
+done
 if [ "$CODE" = "200" ] && [ "$SERVED" = "$EXPECTED" ]; then
   echo "OK: $DOMAIN -> 200, serving $SERVED"
 else

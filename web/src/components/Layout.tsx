@@ -6,6 +6,7 @@ import { NavLink, Outlet } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import { MascotPanel } from "@/components/MascotPanel"
+import { JobsBar } from "@/components/JobsBar"
 import { CalendarRange, Flame, LogOut, Radar, Sparkles } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { Toaster } from "@/components/ui"
@@ -59,6 +60,7 @@ export function Layout() {
         </button>
       </aside>
       <main className="min-w-0 flex-1 px-10 py-8">
+        <JobsBar />
         <Outlet />
       </main>
       {/* No `key` here: remounting would wipe the chat the moment onboarding

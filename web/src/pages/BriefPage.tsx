@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { CalendarRange, Check, Download, FileText } from "lucide-react"
-import { get, post } from "@/api/client"
+import { CalendarRange, Check, Download, FileText, Loader2 } from "lucide-react"
+import { api, get, post } from "@/api/client"
+import { useActiveJob } from "@/components/JobsBar"
 import { supabase } from "@/lib/supabase"
 import { Badge, Button, Card, EmptyState, ExternalLink, Spinner, toast } from "@/components/ui"
 import { compact, multiplier, shortDate } from "@/lib/format"
@@ -51,14 +52,20 @@ export function BriefPage() {
     queryFn: () => get<{ items: BriefSummary[] }>("/briefs"),
   })
 
+  const running = useActiveJob("build_weekly_brief")
   const generate = useMutation({
-    mutationFn: () => post<{ job_id: string }>("/briefs/generate", {}),
-    onSuccess: () => {
-      toast("Brief encolado: el modelo fuerte está armando tu semana (~1 min).")
-      setTimeout(() => qc.invalidateQueries({ queryKey: ["briefs"] }), 45000)
+    mutationFn: api.generateBrief,
+    onSuccess: (res) => {
+      toast(
+        res.status === "already_running"
+          ? "Ya se está generando un brief: no se lanzó otro ni se cobró de nuevo."
+          : "Generando tu brief. Mira el avance arriba; te avisamos al terminar.",
+      )
+      qc.invalidateQueries({ queryKey: ["jobs"] })
     },
     onError: (e) => toast((e as Error).message, "error"),
   })
+  const busy = generate.isPending || !!running
 
   const activeId = selectedId ?? briefs?.items[0]?.id ?? null
 
@@ -71,10 +78,19 @@ export function BriefPage() {
             Tu plan de grabación, cada idea anclada a evidencia real del nicho
           </p>
         </div>
-        <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
-          <CalendarRange className="size-4" />
-          Generar brief de la semana
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button onClick={() => generate.mutate()} disabled={busy}>
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CalendarRange className="size-4" />
+            )}
+            {busy ? "Generando…" : "Generar brief de la semana"}
+          </Button>
+          <span className="text-[11px] text-gray-400">
+            Analiza antes los ganchos que falten · ~US$0.04 por brief
+          </span>
+        </div>
       </div>
 
       {isLoading ? (
