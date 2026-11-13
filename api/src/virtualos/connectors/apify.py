@@ -33,6 +33,10 @@ def _token() -> str:
     return settings.apify_token.get_secret_value()
 
 
+def _auth_headers() -> dict[str, str]:
+    return {"Authorization": f"Bearer {_token()}"}
+
+
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(min=2, max=20), reraise=True)
 async def run_actor_sync(
     actor_id: str,
@@ -46,13 +50,14 @@ async def run_actor_sync(
     Uses the run-sync-get-dataset-items endpoint: one call, blocking until
     the run finishes (or the HTTP timeout hits, which tenacity retries once).
     """
-    token = _token()
     slug = actor_id.replace("/", "~")
-    params: dict[str, Any] = {"token": token}
+    params: dict[str, Any] = {}
     if max_items is not None:
         params["maxItems"] = max_items
 
-    async with httpx.AsyncClient(timeout=_RUN_TIMEOUT) as client:
+    # Token goes in the Authorization header, NEVER the query string:
+    # URLs end up in logs (httpx, proxies, Apify request logs).
+    async with httpx.AsyncClient(timeout=_RUN_TIMEOUT, headers=_auth_headers()) as client:
         resp = await client.post(
             f"{_BASE}/acts/{slug}/run-sync-get-dataset-items",
             params=params,
@@ -79,11 +84,10 @@ async def _last_run_cost(actor_id: str) -> float | None:
     """Best-effort cost of the actor's most recent run. Never raises."""
     try:
         slug = actor_id.replace("/", "~")
-        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
-            resp = await client.get(
-                f"{_BASE}/acts/{slug}/runs/last",
-                params={"token": _token()},
-            )
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0), headers=_auth_headers()
+        ) as client:
+            resp = await client.get(f"{_BASE}/acts/{slug}/runs/last")
             resp.raise_for_status()
             data = resp.json().get("data", {})
             return data.get("usageTotalUsd")

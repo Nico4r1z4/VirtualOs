@@ -32,6 +32,11 @@ async def test_run_actor_sync_returns_items(httpx_mock: HTTPXMock) -> None:
     items = await run_actor_sync("foo/bar", {"x": 1}, workspace_id="ws-1")
     assert items == [{"id": "1"}, {"id": "2"}]
 
+    # Security: the token must travel in the header, never in the URL.
+    for req in httpx_mock.get_requests():
+        assert "test-token" not in str(req.url)
+        assert req.headers["Authorization"] == "Bearer test-token"
+
 
 async def test_run_actor_sync_error_raises(httpx_mock: HTTPXMock) -> None:
     # Both tenacity attempts must be mocked.

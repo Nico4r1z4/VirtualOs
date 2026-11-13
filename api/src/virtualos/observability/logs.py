@@ -13,6 +13,10 @@ def setup_logging() -> None:
     settings = get_settings()
     level = getattr(logging, settings.log_level)
     logging.basicConfig(level=level, format="%(message)s")
+    # httpx/httpcore log full request URLs at INFO; never let URLs (which may
+    # carry provider params) reach logs.
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
