@@ -146,6 +146,20 @@ FEATURE_DOCS = {
 # ---------------------------------------------------------------------------
 
 
+def as_text_list(value: Any) -> list[str] | None:
+    """Normalize model-supplied list args. Models sometimes send "es" or
+    "ahorro, deudas" where a list is expected; None stays None."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        parts = [p.strip().lstrip("@#") for p in value.split(",")]
+        return [p for p in parts if p] or None
+    if isinstance(value, (list, tuple)):
+        items = [str(v).strip() for v in value if v is not None and str(v).strip()]
+        return items or None
+    return [str(value)]
+
+
 async def execute_tool(
     name: str, args: dict[str, Any], *, workspace_id: str, user_id: str
 ) -> dict[str, Any]:
@@ -162,20 +176,20 @@ async def execute_tool(
             row = await pool.fetchrow(
                 """
                 UPDATE vos.niche_profiles SET
-                    name = $2, kind = COALESCE($3, kind), platforms = $4, countries = $5,
-                    languages = COALESCE($6, languages), keywords = COALESCE($7, keywords),
-                    hashtags = COALESCE($8, hashtags), seed_accounts = COALESCE($9::jsonb, seed_accounts),
+                    name = $2, kind = COALESCE($3, kind), platforms = $4::text[], countries = $5::text[],
+                    languages = COALESCE($6::text[], languages), keywords = COALESCE($7::text[], keywords),
+                    hashtags = COALESCE($8::text[], hashtags), seed_accounts = COALESCE($9::jsonb, seed_accounts),
                     goals = COALESCE($10, goals), tone = COALESCE($11, tone), updated_at = NOW()
                 WHERE id = $1 RETURNING id, name
                 """,
                 active["id"],
                 args.get("name"),
                 args.get("kind"),
-                args.get("platforms") or ["tiktok"],
-                args.get("countries") or ["CO"],
-                args.get("languages"),
-                args.get("keywords"),
-                args.get("hashtags"),
+                as_text_list(args.get("platforms")) or ["tiktok"],
+                as_text_list(args.get("countries")) or ["CO"],
+                as_text_list(args.get("languages")),
+                as_text_list(args.get("keywords")),
+                as_text_list(args.get("hashtags")),
                 json.dumps(args["seed_accounts"]) if args.get("seed_accounts") else None,
                 args.get("goals"),
                 args.get("tone"),
@@ -198,18 +212,21 @@ async def execute_tool(
             """
             INSERT INTO vos.niche_profiles
                 (workspace_id, kind, name, platforms, countries, languages, keywords, hashtags, seed_accounts, goals, tone)
-            VALUES ($1, COALESCE($2, 'creator'), $3, $4, $5, COALESCE($6, '{es}'), COALESCE($7, '{}'),
-                    COALESCE($8, '{}'), COALESCE($9::jsonb, '{}'), $10, $11)
+            -- Explicit ::text[]: COALESCE($n, '{...}') alone makes Postgres infer
+            -- plain text for the parameter and fail against the text[] column.
+            VALUES ($1, COALESCE($2, 'creator'), $3, $4::text[], $5::text[],
+                    COALESCE($6::text[], '{es}'), COALESCE($7::text[], '{}'),
+                    COALESCE($8::text[], '{}'), COALESCE($9::jsonb, '{}'), $10, $11)
             RETURNING id, name
             """,
             workspace_id,
             args.get("kind"),
             args["name"],
-            args.get("platforms") or ["tiktok"],
-            args.get("countries") or ["CO"],
-            args.get("languages"),
-            args.get("keywords"),
-            args.get("hashtags"),
+            as_text_list(args.get("platforms")) or ["tiktok"],
+            as_text_list(args.get("countries")) or ["CO"],
+            as_text_list(args.get("languages")),
+            as_text_list(args.get("keywords")),
+            as_text_list(args.get("hashtags")),
             json.dumps(args["seed_accounts"]) if args.get("seed_accounts") else None,
             args.get("goals"),
             args.get("tone"),
