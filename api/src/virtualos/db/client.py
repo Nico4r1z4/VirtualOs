@@ -8,6 +8,7 @@ Adapted from orkiza-captacion db/client.py (pool + session-pooler validation).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -48,15 +49,28 @@ async def init_pool() -> asyncpg.Pool:
     dsn = settings.database_url
     _validate_session_pooler(dsn)
 
-    _pool = await asyncpg.create_pool(
-        dsn=dsn,
-        min_size=1,
-        max_size=10,
-        command_timeout=30,
-        server_settings={"search_path": "vos,extensions,public"},
-    )
-    logger.info("asyncpg pool initialized")
-    return _pool
+    # Retry: transient DNS/network failures at boot (seen on Windows dev and on
+    # container restarts) must not kill the process.
+    last_exc: Exception | None = None
+    for attempt in range(1, 6):
+        try:
+            _pool = await asyncpg.create_pool(
+                dsn=dsn,
+                min_size=1,
+                max_size=10,
+                command_timeout=30,
+                server_settings={"search_path": "vos,extensions,public"},
+            )
+            logger.info("asyncpg pool initialized")
+            return _pool
+        except (OSError, asyncpg.PostgresConnectionError) as exc:
+            last_exc = exc
+            wait = 2 * attempt
+            logger.warning(
+                "db connect failed (attempt %d/5): %s; retrying in %ds", attempt, exc, wait
+            )
+            await asyncio.sleep(wait)
+    raise RuntimeError("could not connect to the database after 5 attempts") from last_exc
 
 
 async def close_pool() -> None:

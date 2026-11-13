@@ -158,7 +158,7 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
 
     provider = get_provider()
     result = await provider.complete(
-        model=settings.llm_model_strong,
+        model=settings.resolved_model_strong,
         system=IDEAS_SYSTEM,
         messages=[{"role": "user", "content": user_msg}],
         max_tokens=4000,
@@ -187,7 +187,7 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
         profile["id"],
         week_start,
         parsed.summary,
-        settings.llm_model_strong,
+        settings.resolved_model_strong,
         result.cost_usd,
     )
     assert brief_row is not None
@@ -224,7 +224,7 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
             ev_posts,
             ev_trends,
             ev_news,
-            settings.llm_model_strong,
+            settings.resolved_model_strong,
         )
         assert row is not None
         idea_ids.append(str(row["id"]))

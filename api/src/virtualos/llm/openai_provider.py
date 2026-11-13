@@ -6,6 +6,7 @@ accounting and temperature-retry. Only this module imports the openai SDK.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import Any
@@ -14,7 +15,7 @@ from openai import AsyncOpenAI, BadRequestError
 
 from virtualos.config.settings import get_settings
 from virtualos.llm.pricing import compute_cost_usd
-from virtualos.llm.provider import LLMResult
+from virtualos.llm.provider import LLMResult, ToolCall
 from virtualos.observability.usage import record_usage
 
 logger = logging.getLogger(__name__)
@@ -50,20 +51,14 @@ class OpenAIProvider:
         output_format: str = "text",
         workspace_id: str | None = None,
     ) -> LLMResult:
-        if tools:
-            raise NotImplementedError(
-                "Tool use is only implemented for the Anthropic provider (agent runs on it)."
-            )
         client = _get_client(self._api_key)
 
         oai_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-        for m in messages:
-            content = m["content"]
-            if not isinstance(content, str):
-                raise NotImplementedError("OpenAIProvider only supports plain-text messages.")
-            oai_messages.append({"role": m["role"], "content": content})
+        oai_messages.extend(to_openai_messages(messages))
 
         extra: dict[str, Any] = {}
+        if tools:
+            extra["tools"] = to_openai_tools(tools)
         if output_format == "json":
             # Requires the word "json" somewhere in the prompt or OpenAI returns 400.
             extra["response_format"] = {"type": "json_object"}
@@ -92,7 +87,9 @@ class OpenAIProvider:
             )
         latency_ms = int((time.monotonic() - started) * 1000)
 
-        text = resp.choices[0].message.content or ""
+        msg = resp.choices[0].message
+        text = msg.content or ""
+        tool_calls, raw_content = from_openai_message(text, msg.tool_calls)
         usage = resp.usage
         prompt_tokens = usage.prompt_tokens if usage else 0
         output_tokens = usage.completion_tokens if usage else 0
@@ -120,4 +117,86 @@ class OpenAIProvider:
             cache_creation_tokens=0,
             cost_usd=cost_usd,
             latency_ms=latency_ms,
+            stop_reason="tool_use" if tool_calls else "end_turn",
+            tool_calls=tool_calls,
+            raw_content=raw_content,
         )
+
+
+# ---------------------------------------------------------------------------
+# Canonical (Anthropic-style) <-> OpenAI chat format translation.
+# The agent loop speaks the canonical format; only this module knows OpenAI's.
+# ---------------------------------------------------------------------------
+
+
+def to_openai_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t.get("description", ""),
+                "parameters": t.get("input_schema") or {"type": "object", "properties": {}},
+            },
+        }
+        for t in tools
+    ]
+
+
+def to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for m in messages:
+        role, content = m["role"], m["content"]
+        if isinstance(content, str):
+            out.append({"role": role, "content": content})
+            continue
+
+        blocks = list(content)
+        if role == "assistant":
+            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+            calls = [
+                {
+                    "id": b["id"],
+                    "type": "function",
+                    "function": {"name": b["name"], "arguments": json.dumps(b.get("input") or {})},
+                }
+                for b in blocks
+                if b.get("type") == "tool_use"
+            ]
+            entry: dict[str, Any] = {"role": "assistant", "content": text or None}
+            if calls:
+                entry["tool_calls"] = calls
+            out.append(entry)
+        else:
+            # user turn carrying tool_result blocks (and possibly text)
+            for b in blocks:
+                if b.get("type") == "tool_result":
+                    result = b.get("content", "")
+                    out.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": b["tool_use_id"],
+                            "content": result if isinstance(result, str) else json.dumps(result),
+                        }
+                    )
+                elif b.get("type") == "text":
+                    out.append({"role": "user", "content": b.get("text", "")})
+    return out
+
+
+def from_openai_message(
+    text: str, oai_tool_calls: list[Any] | None
+) -> tuple[list[ToolCall], list[dict[str, Any]]]:
+    """Return (tool_calls, canonical raw_content blocks)."""
+    calls: list[ToolCall] = []
+    raw: list[dict[str, Any]] = []
+    if text:
+        raw.append({"type": "text", "text": text})
+    for tc in oai_tool_calls or []:
+        try:
+            args = json.loads(tc.function.arguments or "{}")
+        except json.JSONDecodeError:
+            args = {}
+        calls.append(ToolCall(id=tc.id, name=tc.function.name, input=args))
+        raw.append({"type": "tool_use", "id": tc.id, "name": tc.function.name, "input": args})
+    return calls, raw

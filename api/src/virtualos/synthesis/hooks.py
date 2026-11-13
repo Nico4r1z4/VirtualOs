@@ -86,7 +86,7 @@ async def synthesize_hooks(workspace_id: str, payload: dict[str, Any]) -> dict[s
 
         try:
             result = await provider.complete(
-                model=settings.llm_model_fast,
+                model=settings.resolved_model_fast,
                 system=HOOKS_SYSTEM,
                 messages=[{"role": "user", "content": material}],
                 max_tokens=800,
@@ -118,7 +118,7 @@ async def synthesize_hooks(workspace_id: str, payload: dict[str, Any]) -> dict[s
             json.dumps(hook.structure),
             hook.cta,
             hook.language,
-            settings.llm_model_fast,
+            settings.resolved_model_fast,
             result.cost_usd,
         )
         done += 1

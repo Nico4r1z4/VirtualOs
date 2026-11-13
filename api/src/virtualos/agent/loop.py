@@ -52,14 +52,26 @@ async def _load_history(conversation_id: str) -> list[dict[str, Any]]:
     )
     messages: list[dict[str, Any]] = []
     for r in reversed(rows):
+        # Tool results are stored with role 'tool' but in the canonical format
+        # they travel as a user turn carrying tool_result blocks.
+        role = "user" if r["role"] == "tool" else r["role"]
         if r["tool_calls"]:
             blocks = (
                 json.loads(r["tool_calls"]) if isinstance(r["tool_calls"], str) else r["tool_calls"]
             )
-            messages.append({"role": r["role"], "content": blocks})
+            messages.append({"role": role, "content": blocks})
         elif r["content"]:
-            messages.append({"role": r["role"], "content": r["content"]})
-    return messages
+            messages.append({"role": role, "content": r["content"]})
+    return trim_history(messages)
+
+
+def trim_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The LIMIT window may cut a tool_use/tool_result pair in half; drop leading
+    messages until history starts on a plain-text user turn."""
+    for i, m in enumerate(messages):
+        if m["role"] == "user" and isinstance(m["content"], str):
+            return messages[i:]
+    return []
 
 
 async def _save_message(
@@ -102,7 +114,7 @@ async def run_agent(
     for _ in range(MAX_TURNS):
         try:
             result = await provider.complete(
-                model=settings.llm_model_strong,
+                model=settings.resolved_model_strong,
                 system=SYSTEM,
                 messages=messages,
                 max_tokens=1500,

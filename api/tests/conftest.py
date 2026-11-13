@@ -17,6 +17,11 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Deterministic settings for every test; never reads a real .env."""
     monkeypatch.setenv("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
     monkeypatch.setenv("APP_ENV", "development")
+    # Explicit env vars beat api/.env (which exists in dev with real user config).
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_MODEL_FAST", "claude-haiku-4-5")
+    monkeypatch.setenv("LLM_MODEL_STRONG", "claude-sonnet-4-6")
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:5173")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
