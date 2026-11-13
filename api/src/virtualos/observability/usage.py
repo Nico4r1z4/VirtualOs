@@ -34,7 +34,9 @@ async def record_usage(
         await pool.execute(
             """
             INSERT INTO vos.api_usage (workspace_id, provider, day, calls, units, unit_label, cost_usd)
-            VALUES ($1, $2, CURRENT_DATE, $3, COALESCE($4, 0), $5, COALESCE($6, 0))
+            -- Explicit ::numeric: COALESCE($n, 0) alone makes Postgres infer the
+            -- parameter as integer and silently truncate fractional USD to 0.
+            VALUES ($1, $2, CURRENT_DATE, $3, COALESCE($4::numeric, 0), $5, COALESCE($6::numeric, 0))
             ON CONFLICT (workspace_id, provider, day) DO UPDATE SET
                 calls      = vos.api_usage.calls + EXCLUDED.calls,
                 units      = vos.api_usage.units + EXCLUDED.units,

@@ -119,31 +119,49 @@ class TikTokTrendsConnector:
         )
 
     def normalize(self, raw: RawBatch) -> list[PlatformTrend]:
+        """Accepts both camelCase and snake_case actor outputs (the live actor
+        returns snake_case with numbers as strings)."""
         country = raw.meta.get("country", "")
         trends: list[PlatformTrend] = []
         for item in raw.items:
-            name = (
-                item.get("hashtagName")
-                or item.get("hashtag")
-                or item.get("name")
-                or item.get("title")
-            )
+            name = _first(item, "hashtagName", "hashtag_name", "hashtag", "name", "title")
             if not name:
                 continue
-            metrics = {
-                k: item[k]
-                for k in ("publishCnt", "videoViews", "viewCount", "postCount", "trend")
-                if k in item
-            }
+            metrics: dict[str, Any] = {}
+            for canonical, keys in {
+                "publishCnt": ("publishCnt", "publish_cnt", "postCount"),
+                "videoViews": ("videoViews", "video_views", "viewCount"),
+            }.items():
+                value = _to_int(_first(item, *keys))
+                if value is not None:
+                    metrics[canonical] = value
+            ext_id = _first(item, "hashtagId", "hashtag_id")
             trends.append(
                 PlatformTrend(
                     platform="tiktok",
-                    country=str(item.get("countryCode") or country),
+                    country=str(_first(item, "countryCode", "country_code") or country).upper(),
                     trend_type="hashtag",
                     name=str(name).lstrip("#"),
-                    external_id=str(item.get("hashtagId")) if item.get("hashtagId") else None,
-                    rank=item.get("rank") or item.get("position"),
+                    external_id=str(ext_id) if ext_id else None,
+                    rank=_to_int(_first(item, "rank", "position")),
                     metrics=metrics,
                 )
             )
         return trends
+
+
+def _first(item: dict[str, Any], *keys: str) -> Any:
+    for k in keys:
+        v = item.get(k)
+        if v not in (None, ""):
+            return v
+    return None
+
+
+def _to_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None

@@ -63,6 +63,30 @@ def test_tiktok_trends_normalize() -> None:
     assert trends[2].country == "CO"
 
 
+def test_tiktok_trends_snake_case_live_shape() -> None:
+    """Shape observed from the live actor on 2026-11-13 (snake_case, string numbers)."""
+    items = [
+        {
+            "hashtag_id": "7691930",
+            "hashtag_name": "ahorro",
+            "rank": "2",
+            "publish_cnt": "15053",
+            "video_views": "124680236",
+            "country_code": "co",
+        }
+    ]
+    trends = TikTokTrendsConnector().normalize(
+        RawBatch(source="apify:test", items=items, meta={"country": "CO"})
+    )
+    assert len(trends) == 1
+    t = trends[0]
+    assert t.name == "ahorro"
+    assert t.rank == 2
+    assert t.country == "CO"
+    assert t.external_id == "7691930"
+    assert t.metrics == {"publishCnt": 15053, "videoViews": 124680236}
+
+
 def test_instagram_normalize() -> None:
     raw = RawBatch(source="apify:test", items=_load("instagram_items.json"))
     posts = InstagramProfilesConnector().normalize(raw)

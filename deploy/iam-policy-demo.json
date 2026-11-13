@@ -1,0 +1,49 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnlyDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CreateDemoResources",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:CreateSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AllocateAddress",
+        "ec2:AssociateAddress",
+        "ec2:ImportKeyPair",
+        "ec2:CreateTags"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:RequestedRegion": "us-east-1" }
+      }
+    },
+    {
+      "Sid": "ManageOnlyVirtualosTagged",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StopInstances",
+        "ec2:StartInstances",
+        "ec2:RebootInstances",
+        "ec2:TerminateInstances",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:ReleaseAddress",
+        "ec2:DisassociateAddress"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceTag/Project": "virtualos" }
+      }
+    }
+  ]
+}
