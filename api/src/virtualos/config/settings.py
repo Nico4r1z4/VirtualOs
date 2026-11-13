@@ -36,6 +36,36 @@ class Settings(BaseSettings):
     # Legacy HS256 secret; if unset, JWT verification uses the project's JWKS endpoint.
     supabase_jwt_secret: SecretStr | None = None
 
+    @field_validator("supabase_url", mode="before")
+    @classmethod
+    def _normalize_supabase_url(cls, v: object) -> object:
+        """Accept 'ref.supabase.co' or a bare project ref; always return https://..."""
+        if not isinstance(v, str):
+            return v
+        v = v.strip().strip('"').strip("'").rstrip("/")
+        if not v or "<" in v:
+            return None
+        if not v.startswith(("http://", "https://")):
+            v = f"https://{v}" if "." in v else f"https://{v}.supabase.co"
+        return v
+
+    @property
+    def resolved_supabase_url(self) -> str | None:
+        """supabase_url if it is a well-formed project URL, else derived from the
+        pooler user 'postgres.<ref>' in DATABASE_URL."""
+        import re
+        from urllib.parse import urlparse
+
+        if self.supabase_url and re.fullmatch(
+            r"https://[a-z0-9]+\.supabase\.co", self.supabase_url
+        ):
+            return self.supabase_url
+
+        user = urlparse(self.database_url).username or ""
+        if user.startswith("postgres.") and len(user) > len("postgres."):
+            return f"https://{user.split('.', 1)[1]}.supabase.co"
+        return None
+
     # ---------- LLM ----------
     llm_provider: Literal["anthropic", "openai"] = "anthropic"
 

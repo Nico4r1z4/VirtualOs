@@ -27,12 +27,13 @@ _JWKS_TTL_S = 3600
 
 async def _get_jwks() -> list[dict[str, Any]]:
     settings = get_settings()
-    if not settings.supabase_url:
+    base_url = settings.resolved_supabase_url
+    if not base_url:
         raise AuthError("SUPABASE_URL is not configured")
     now = time.monotonic()
     if _jwks_cache["keys"] is not None and now - _jwks_cache["fetched_at"] < _JWKS_TTL_S:
         return _jwks_cache["keys"]
-    url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    url = f"{base_url}/auth/v1/.well-known/jwks.json"
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(url)
         resp.raise_for_status()
