@@ -18,6 +18,9 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    # Only DOMAIN is passed (interpolated from deploy/.env); Caddy never sees app secrets.
+    environment:
+      - DOMAIN=${DOMAIN}
     ports:
       - "80:80"
       - "443:443"
