@@ -51,9 +51,10 @@ async def send_message(body: AgentMessageIn, auth: Auth) -> EventSourceResponse:
     conversation_id = body.conversation_id
     if conversation_id:
         conv = await pool.fetchrow(
-            "SELECT id FROM vos.agent_conversations WHERE id = $1 AND workspace_id = $2",
+            "SELECT id FROM vos.agent_conversations WHERE id = $1 AND workspace_id = $2 AND user_id = $3",
             conversation_id,
             auth.workspace_id,
+            auth.user_id,
         )
         if conv is None:
             raise HTTPException(status_code=404, detail="Conversación no encontrada")
@@ -83,10 +84,21 @@ async def send_message(body: AgentMessageIn, auth: Auth) -> EventSourceResponse:
 @router.get("/conversations")
 async def list_conversations(auth: Auth) -> dict[str, Any]:
     pool = get_pool()
+    # Scoped to the requesting user too: in a multi-member (agency) workspace a
+    # member must not load another member's chat.
     rows = await pool.fetch(
-        "SELECT id, title, created_at, updated_at FROM vos.agent_conversations "
-        "WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT 20",
+        """
+        SELECT c.id, c.title, c.created_at,
+               COALESCE(MAX(m.created_at), c.created_at) AS last_message_at
+        FROM vos.agent_conversations c
+        LEFT JOIN vos.agent_messages m ON m.conversation_id = c.id
+        WHERE c.workspace_id = $1 AND c.user_id = $2
+        GROUP BY c.id
+        ORDER BY last_message_at DESC
+        LIMIT 20
+        """,
         auth.workspace_id,
+        auth.user_id,
     )
     return {"items": [{**dict(r), "id": str(r["id"])} for r in rows]}
 
@@ -99,10 +111,12 @@ async def conversation_messages(conversation_id: str, auth: Auth) -> dict[str, A
         SELECT m.id, m.role, m.content, m.created_at
         FROM vos.agent_messages m
         JOIN vos.agent_conversations c ON c.id = m.conversation_id
-        WHERE m.conversation_id = $1 AND c.workspace_id = $2 AND m.content IS NOT NULL
+        WHERE m.conversation_id = $1 AND c.workspace_id = $2 AND c.user_id = $3
+          AND m.content IS NOT NULL
         ORDER BY m.id
         """,
         conversation_id,
         auth.workspace_id,
+        auth.user_id,
     )
     return {"items": [dict(r) for r in rows]}

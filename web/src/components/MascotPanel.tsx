@@ -74,15 +74,25 @@ export function MascotPanel({ startOpen = false }: { startOpen?: boolean }) {
       try {
         saved = localStorage.getItem(key)
       } catch {
-        return
+        /* storage unavailable: fall back to the server below */
       }
-      if (!saved) return
+      // No remembered conversation (first visit on this browser, or chats from
+      // before this feature): resume the user's most recent one from the server.
+      if (!saved) {
+        try {
+          const convs = await get<{ items: { id: string }[] }>("/agent/conversations")
+          saved = convs.items[0]?.id ?? null
+        } catch {
+          return
+        }
+      }
+      if (!saved || cancelled) return
       try {
         const res = await get<{ items: { role: string; content: string | null }[] }>(
           `/agent/conversations/${saved}/messages`,
         )
         if (cancelled) return
-        conversationRef.current = saved
+        rememberConversation(saved)
         setItems(
           res.items
             .filter((m) => m.content && (m.role === "user" || m.role === "assistant"))
