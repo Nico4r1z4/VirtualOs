@@ -31,7 +31,7 @@
       ],
       "Resource": "*",
       "Condition": {
-        "StringEquals": { "aws:RequestedRegion": "us-east-1" }
+        "StringEquals": { "aws:RequestedRegion": "us-east-2" }
       }
     },
     {

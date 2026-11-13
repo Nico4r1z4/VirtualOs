@@ -10,7 +10,7 @@
       ],
       "env": {
         "AWS_PROFILE": "virtualos",
-        "AWS_REGION": "us-east-1"
+        "AWS_REGION": "us-east-2"
       }
     }
   }
