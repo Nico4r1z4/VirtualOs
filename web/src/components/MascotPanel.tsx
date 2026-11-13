@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { Bot, ChevronRight, Loader2, Send, Wrench } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
+import { get } from "@/api/client"
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:8000"
 
@@ -50,8 +51,71 @@ export function MascotPanel({ startOpen = false }: { startOpen?: boolean }) {
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const conversationRef = useRef<string | null>(null)
+  const storageKeyRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
+
+  // Only ever OPEN automatically (onboarding); never close or reset on
+  // re-render — the panel must survive the profile being created mid-chat.
+  useEffect(() => {
+    if (startOpen) setOpen(true)
+  }, [startOpen])
+
+  // Restore this user's last conversation from the server after a reload.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.auth.getSession()
+      const userId = data.session?.user.id
+      if (!userId) return
+      const key = `vos_conversation_${userId}`
+      storageKeyRef.current = key
+      let saved: string | null = null
+      try {
+        saved = localStorage.getItem(key)
+      } catch {
+        return
+      }
+      if (!saved) return
+      try {
+        const res = await get<{ items: { role: string; content: string | null }[] }>(
+          `/agent/conversations/${saved}/messages`,
+        )
+        if (cancelled) return
+        conversationRef.current = saved
+        setItems(
+          res.items
+            .filter((m) => m.content && (m.role === "user" || m.role === "assistant"))
+            .map((m) =>
+              m.role === "user"
+                ? { kind: "user" as const, text: m.content as string }
+                : { kind: "assistant" as const, text: m.content as string },
+            ),
+        )
+      } catch {
+        // Conversation gone or belongs to another workspace: start fresh.
+        try {
+          localStorage.removeItem(key)
+        } catch {
+          /* storage unavailable */
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function rememberConversation(id: string) {
+    conversationRef.current = id
+    const key = storageKeyRef.current
+    if (!key) return
+    try {
+      localStorage.setItem(key, id)
+    } catch {
+      /* storage unavailable: conversation still works for this page view */
+    }
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
@@ -95,7 +159,7 @@ export function MascotPanel({ startOpen = false }: { startOpen?: boolean }) {
           } else if (line.startsWith("data:")) {
             const payload = JSON.parse(line.slice(5).trim()) as Record<string, unknown>
             if (eventName === "meta") {
-              conversationRef.current = String(payload.conversation_id)
+              rememberConversation(String(payload.conversation_id))
             } else if (eventName === "text") {
               setItems((xs) => [...xs, { kind: "assistant", text: String(payload.content) }])
             } else if (eventName === "tool_result") {

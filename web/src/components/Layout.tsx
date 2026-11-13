@@ -61,7 +61,9 @@ export function Layout() {
       <main className="min-w-0 flex-1 px-10 py-8">
         <Outlet />
       </main>
-      {isFetched && <MascotPanel key={String(needsOnboarding)} startOpen={needsOnboarding} />}
+      {/* No `key` here: remounting would wipe the chat the moment onboarding
+          creates the profile (needsOnboarding flips true -> false). */}
+      {isFetched && <MascotPanel startOpen={needsOnboarding} />}
       <Toaster />
     </div>
   )
