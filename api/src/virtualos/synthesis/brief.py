@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from virtualos.config.settings import get_settings
 from virtualos.db.client import get_pool
 from virtualos.llm.provider import get_provider
+from virtualos.synthesis.hooks import synthesize_hooks
 from virtualos.synthesis.prompts import IDEAS_SYSTEM, wrap_untrusted
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,14 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
     )
     if profile is None:
         raise ValueError("no active niche profile for workspace")
+
+    # Analyze any outlier still missing its hook first, so the brief never
+    # depends on which button the user pressed first (seen live 2026-11-13:
+    # the brief job ran before the hooks job and got 0 hooks). Only outliers
+    # without a hook are processed, so this is a no-op when hooks exist.
+    hooks_stats = await synthesize_hooks(workspace_id, {"min_outlier": 2.0, "limit": 30})
+    if hooks_stats.get("hooks_created"):
+        logger.info("brief: created %s missing hooks first", hooks_stats["hooks_created"])
 
     # --- Evidence: outliers (with hooks when available), trends, news ---
     posts = await pool.fetch(
