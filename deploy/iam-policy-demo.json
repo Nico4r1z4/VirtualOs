@@ -2,6 +2,17 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "UseAwsManagedMcpServer",
+      "Effect": "Allow",
+      "Action": [
+        "aws-mcp:InvokeMcp",
+        "aws-mcp:CallReadOnlyTool",
+        "aws-mcp:CallReadWriteTool",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "ReadOnlyDescribe",
       "Effect": "Allow",
       "Action": [
