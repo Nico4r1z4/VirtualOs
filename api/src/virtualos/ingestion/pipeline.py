@@ -9,8 +9,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from virtualos.config.settings import get_settings
 from virtualos.connectors.instagram import InstagramProfilesConnector
 from virtualos.connectors.news import SerperNewsConnector
+from virtualos.connectors.rss import RssNewsConnector
 from virtualos.connectors.storage import save_raw
 from virtualos.connectors.tiktok import TikTokProfilesConnector, TikTokTrendsConnector
 from virtualos.db.client import get_pool
@@ -40,7 +42,6 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
         seed_accounts = _json.loads(raw_seed) if isinstance(raw_seed, str) else dict(raw_seed)
     platforms: list[str] = list(profile["platforms"] or [])
     countries: list[str] = list(profile["countries"] or ["CO"])
-    keywords: list[str] = list(profile["keywords"] or [])
     stats: dict[str, Any] = {"posts": 0, "trends": 0, "news": 0}
 
     # --- Posts from seed accounts ---
@@ -100,26 +101,8 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
             except Exception:
                 logger.exception("trends ingestion failed for %s", country)
 
-    # --- News on profile keywords ---
-    if keywords:
-        await report_progress("Buscando noticias del nicho")
-        news_conn = SerperNewsConnector()
-        query = " ".join(keywords[:4])
-        try:
-            raw = await news_conn.fetch(
-                workspace_id=workspace_id,
-                params={"query": query, "country": (countries[0] if countries else "co").lower()},
-            )
-            items = news_conn.normalize(raw)
-            async with pool.acquire() as conn:
-                stats["news"] += await upsert_news(
-                    conn,
-                    workspace_id=workspace_id,
-                    niche_profile_id=str(profile["id"]),
-                    items=items,
-                )
-        except Exception:
-            logger.exception("news ingestion failed")
+    # --- News on profile keywords (free RSS; never fails the ingestion) ---
+    stats["news"] = await ingest_news_for_profile(workspace_id, profile)
 
     # --- Metrics ---
     await report_progress(f"Calculando outliers sobre {stats['posts']} posts")
@@ -127,3 +110,53 @@ async def ingest_niche(workspace_id: str, payload: dict[str, Any]) -> dict[str, 
         stats["metrics_updated"] = await recompute_workspace_metrics(conn, workspace_id)
 
     return stats
+
+
+async def ingest_news_for_profile(workspace_id: str, profile: Any) -> int:
+    """RSS (curated national media + Google News) and, only if a key is
+    configured, Serper. Returns NEW news items stored. Never raises."""
+    pool = get_pool()
+    keywords = list(profile["keywords"] or [])
+    countries = list(profile["countries"] or ["CO"])
+    country = countries[0] if countries else "CO"
+    await report_progress("Buscando noticias del nicho en medios y Google News")
+
+    connectors: list[tuple[Any, dict[str, Any]]] = [
+        (RssNewsConnector(), {"keywords": keywords, "country": country})
+    ]
+    if get_settings().serper_api_key and keywords:
+        connectors.append(
+            (
+                SerperNewsConnector(),
+                {"query": " ".join(keywords[:4]), "country": country.lower()},
+            )
+        )
+
+    new_items = 0
+    for conn_impl, params in connectors:
+        try:
+            raw = await conn_impl.fetch(workspace_id=workspace_id, params=params)
+            items = conn_impl.normalize(raw)
+            async with pool.acquire() as conn:
+                new_items += await upsert_news(
+                    conn,
+                    workspace_id=workspace_id,
+                    niche_profile_id=str(profile["id"]),
+                    items=items,
+                )
+        except Exception:
+            logger.exception("news ingestion failed (%s)", type(conn_impl).__name__)
+    return new_items
+
+
+async def refresh_news(workspace_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Handler for 'refresh_news' jobs: news only, no paid scraping."""
+    pool = get_pool()
+    profile = await pool.fetchrow(
+        "SELECT * FROM vos.niche_profiles WHERE workspace_id = $1 AND status = 'active' "
+        "ORDER BY created_at DESC LIMIT 1",
+        workspace_id,
+    )
+    if profile is None:
+        raise ValueError("no active niche profile for workspace")
+    return {"news": await ingest_news_for_profile(workspace_id, profile)}

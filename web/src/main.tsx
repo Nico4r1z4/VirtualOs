@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui"
 import { LoginPage } from "@/pages/LoginPage"
 import { OutliersPage } from "@/pages/OutliersPage"
 import { TrendsPage } from "@/pages/TrendsPage"
+import { NewsPage } from "@/pages/NewsPage"
 import { HooksPage } from "@/pages/HooksPage"
 import { BriefPage } from "@/pages/BriefPage"
 
@@ -43,6 +44,7 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<OutliersPage />} />
+              <Route path="/noticias" element={<NewsPage />} />
               <Route path="/tendencias" element={<TrendsPage />} />
               <Route path="/ganchos" element={<HooksPage />} />
               <Route path="/brief" element={<BriefPage />} />

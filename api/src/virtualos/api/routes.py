@@ -281,6 +281,46 @@ async def enqueue_paid_ingestion(
     return {"job_id": job_id, "status": "queued"}
 
 
+# ---------------------------------------------------------------------------
+# News (RSS) — freshest first
+# ---------------------------------------------------------------------------
+
+
+@router.get("/news")
+async def list_news(
+    auth: Auth,
+    q: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> dict[str, Any]:
+    where = ["workspace_id = $1"]
+    args: list[Any] = [auth.workspace_id]
+    if q:
+        args.append(f"%{q}%")
+        where.append(f"(title ILIKE ${len(args)} OR snippet ILIKE ${len(args)})")
+    args.append(limit)
+    sql = f"""
+        SELECT id, title, url, source, snippet, published_at, created_at,
+               raw->>'origin' AS origin
+        FROM vos.news_items
+        WHERE {" AND ".join(where)}
+        ORDER BY published_at DESC NULLS LAST, created_at DESC
+        LIMIT ${len(args)}
+    """
+    async with user_tx(auth.claims) as conn:
+        rows = await conn.fetch(sql, *args)
+    return {"items": [_record(r) for r in rows]}
+
+
+@router.post("/news/refresh", status_code=202)
+async def refresh_news_endpoint(auth: Auth) -> dict[str, str]:
+    """Free (RSS only) but still deduped: one refresh at a time."""
+    queue = PostgresJobQueue(get_pool())
+    job_id, created = await queue.enqueue_or_get(
+        workspace_id=auth.workspace_id, kind="refresh_news", payload={}
+    )
+    return {"job_id": job_id, "status": "queued" if created else "already_running"}
+
+
 _JOB_COLS = "id, kind, status, attempts, error, progress, created_at, started_at, finished_at"
 
 

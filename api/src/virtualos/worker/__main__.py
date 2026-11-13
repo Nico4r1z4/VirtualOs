@@ -12,7 +12,7 @@ import signal
 from typing import Any
 
 from virtualos.db.client import close_pool, get_pool, init_pool
-from virtualos.ingestion.pipeline import ingest_niche
+from virtualos.ingestion.pipeline import ingest_niche, refresh_news
 from virtualos.observability.logs import setup_logging
 from virtualos.queue.postgres import PostgresJobQueue, current_job_id
 from virtualos.synthesis.brief import build_weekly_brief
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 HANDLERS: dict[str, Any] = {
     "ingest_niche": ingest_niche,
+    "refresh_news": refresh_news,
     "synthesize_hooks": synthesize_hooks,
     "build_weekly_brief": build_weekly_brief,
 }

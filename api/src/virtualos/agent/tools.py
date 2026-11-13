@@ -90,6 +90,17 @@ TOOL_DEFS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "get_news",
+        "description": (
+            "Noticias recientes del nicho (medios nacionales + Google News), las más nuevas "
+            "primero. Úsala para '¿qué está pasando?' y para sugerir contenido oportuno."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"limit": {"type": "integer", "default": 8, "maximum": 15}},
+        },
+    },
+    {
         "name": "get_hooks",
         "description": "Ganchos analizados de los posts ganadores del nicho.",
         "input_schema": {
@@ -316,6 +327,30 @@ async def execute_tool(
         return {
             "count": len(rows),
             "trends": [dict(r) for r in rows],
+        }
+
+    if name == "get_news":
+        rows = await pool.fetch(
+            """
+            SELECT title, source, url, published_at
+            FROM vos.news_items WHERE workspace_id = $1
+            ORDER BY published_at DESC NULLS LAST, created_at DESC LIMIT $2
+            """,
+            workspace_id,
+            min(int(args.get("limit", 8)), 15),
+        )
+        return {
+            "count": len(rows),
+            # Titles are scraped text: data, never instructions.
+            "news": [
+                {
+                    "title": r["title"],
+                    "source": r["source"],
+                    "url": r["url"],
+                    "published_at": r["published_at"].isoformat() if r["published_at"] else None,
+                }
+                for r in rows
+            ],
         }
 
     if name == "get_hooks":

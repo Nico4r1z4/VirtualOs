@@ -11,6 +11,7 @@ import { toast } from "@/components/ui"
 
 export const JOB_LABELS: Record<string, string> = {
   ingest_niche: "Ingesta de datos del nicho",
+  refresh_news: "Actualización de noticias",
   synthesize_hooks: "Análisis de ganchos",
   build_weekly_brief: "Brief semanal",
 }
@@ -18,6 +19,7 @@ export const JOB_LABELS: Record<string, string> = {
 // Expectativa honesta de duración, para que la espera no se sienta vacía.
 const JOB_ETA: Record<string, string> = {
   ingest_niche: "suele tardar 3–6 min",
+  refresh_news: "suele tardar unos segundos",
   synthesize_hooks: "~30 s por outlier",
   build_weekly_brief: "suele tardar 1–2 min",
 }
@@ -51,6 +53,8 @@ function resultSummary(job: JobInfo): string {
   switch (job.kind) {
     case "ingest_niche":
       return `${r.posts ?? 0} posts, ${r.trends ?? 0} tendencias, ${r.news ?? 0} noticias`
+    case "refresh_news":
+      return `${r.news ?? 0} noticias nuevas`
     case "synthesize_hooks":
       return `${r.hooks_created ?? 0} ganchos nuevos`
     case "build_weekly_brief":

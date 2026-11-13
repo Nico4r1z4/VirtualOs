@@ -134,6 +134,17 @@ export type JobInfo = JobStatus & {
   finished_at: string | null
 }
 
+export type NewsItem = {
+  id: string
+  title: string
+  url: string
+  source: string | null
+  snippet: string | null
+  published_at: string | null
+  created_at: string
+  origin: "curated" | "gnews" | null
+}
+
 // Respuesta de toda acción que gasta dinero: "already_running" significa que
 // NO se lanzó otra (ya había una en curso) — no hay cobro extra.
 export type EnqueueResult = { job_id: string; status: "queued" | "already_running" }
@@ -173,6 +184,8 @@ export const api = {
   generateBrief: () => post<EnqueueResult>("/briefs/generate", {}),
   job: (id: string) => get<JobInfo>(`/jobs/${id}`),
   jobs: () => get<{ items: JobInfo[] }>("/jobs"),
+  news: (q?: string) => get<{ items: NewsItem[] }>(`/news${qs({ q })}`),
+  refreshNews: () => post<EnqueueResult>("/news/refresh"),
 }
 
 export { get, post }

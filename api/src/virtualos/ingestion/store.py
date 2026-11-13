@@ -137,9 +137,11 @@ async def upsert_news(
     niche_profile_id: str | None,
     items: list[NewsItem],
 ) -> int:
+    """Returns how many items were NEW (already-stored URLs are skipped and
+    not counted, so a refresh reports real news, not re-reads)."""
     count = 0
     for n in items:
-        await conn.execute(
+        status = await conn.execute(
             """
             INSERT INTO vos.news_items
                 (workspace_id, niche_profile_id, title, url, source, snippet, published_at, raw)
@@ -155,5 +157,6 @@ async def upsert_news(
             n.published_at,
             json.dumps(n.raw, default=str),
         )
-        count += 1
+        if status.endswith(" 1"):  # "INSERT 0 1" = inserted; "INSERT 0 0" = existed
+            count += 1
     return count

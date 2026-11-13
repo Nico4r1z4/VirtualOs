@@ -7,12 +7,13 @@ import { useQuery } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import { MascotPanel } from "@/components/MascotPanel"
 import { JobsBar } from "@/components/JobsBar"
-import { CalendarRange, Flame, LogOut, Radar, Sparkles } from "lucide-react"
+import { CalendarRange, Flame, LogOut, Newspaper, Radar, Sparkles } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { Toaster } from "@/components/ui"
 
 const NAV = [
   { to: "/", label: "Outliers", icon: Flame },
+  { to: "/noticias", label: "Noticias", icon: Newspaper },
   { to: "/tendencias", label: "Tendencias", icon: Radar },
   { to: "/ganchos", label: "Ganchos", icon: Sparkles },
   { to: "/brief", label: "Brief semanal", icon: CalendarRange },

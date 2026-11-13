@@ -26,6 +26,9 @@
 	handle /ingestions* {
 		reverse_proxy api:8000
 	}
+	handle /news* {
+		reverse_proxy api:8000
+	}
 	# /jobs* (not /jobs/*): the progress bar polls the bare /jobs path.
 	handle /jobs* {
 		reverse_proxy api:8000

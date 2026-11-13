@@ -118,8 +118,9 @@ async def build_weekly_brief(workspace_id: str, payload: dict[str, Any]) -> dict
         MAX_TRENDS,
     )
     news = await pool.fetch(
+        # Freshest real publication date first: timely ideas are the point.
         "SELECT id, title, source, snippet FROM vos.news_items WHERE workspace_id = $1 "
-        "ORDER BY created_at DESC LIMIT $2",
+        "ORDER BY published_at DESC NULLS LAST, created_at DESC LIMIT $2",
         workspace_id,
         MAX_NEWS,
     )
